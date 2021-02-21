@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">MyCurrentLocation</string>
+    <string name="string_latitude">위도</string>
+    <string name="string_longitude">경도</string>
+    <string name="string_altitude">고도</string>
+    <string name="string_accuracy">정확도</string>
+    <string name="get_current_location_button">현재 위치 얻기</string>
 </resources>
