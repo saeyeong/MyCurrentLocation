@@ -1,12 +1,15 @@
-package com.saeyeong.mycurrentlocation
+package com.saeyeong.mycurrentlocation.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
+import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -17,20 +20,29 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.tasks.Task
 import com.google.android.material.snackbar.Snackbar
+import com.saeyeong.mycurrentlocation.BuildConfig
+import com.saeyeong.mycurrentlocation.R
+import com.saeyeong.mycurrentlocation.base.BaseActivity
 import com.saeyeong.mycurrentlocation.databinding.ActivityMainBinding
+import com.saeyeong.mycurrentlocation.hasPermission
+import com.saeyeong.mycurrentlocation.model.Wifi
+import com.saeyeong.mycurrentlocation.requestPermissionWithRationale
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityMainBinding
+class MainActivity : BaseActivity() {
 
-    private val fusedLocationClient: FusedLocationProviderClient by lazy {
-        LocationServices.getFusedLocationProviderClient(applicationContext)
+    private val binding: ActivityMainBinding by binding(R.layout.activity_main)
+    lateinit var adapter:RecyclerViewAdapter
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private val cancellationTokenSource by lazy {
+        CancellationTokenSource()
     }
-    private var cancellationTokenSource = CancellationTokenSource()
 
     private val fineLocationRationalSnackbar by lazy {
         Snackbar.make(
             binding.container,
-            R.string.fine_location_permission_rationale,
+                R.string.fine_location_permission_rationale,
             Snackbar.LENGTH_LONG
         ).setAction(R.string.ok) {
             requestPermissions(
@@ -40,18 +52,51 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val wifiManager by lazy {
+        applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    }
+
+    private val wifiScanReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val success = intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false)
+            if (success) {
+                scanSuccess()
+            } else {
+                scanFailure()
+            }
+        }
+    }
+
+    val intentFilter = IntentFilter()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
 
         setContentView(view)
+        init()
     }
 
     override fun onStop() {
         super.onStop()
         cancellationTokenSource.cancel()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(wifiScanReceiver)
+    }
+
+    private fun init() {
+        adapter = RecyclerViewAdapter()
+        binding.recyclerView.adapter = adapter
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
+
+        intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+        registerReceiver(wifiScanReceiver, intentFilter)
+
+        wifiManager.startScan()
     }
 
     override fun onRequestPermissionsResult(
@@ -141,6 +186,21 @@ class MainActivity : AppCompatActivity() {
             tvNumAltitude.text = "${result.altitude}"
             tvNumAccuracy.text = "${result.accuracy}"
         }
+    }
+
+    private fun scanSuccess() {
+        val results = wifiManager.scanResults.toList()
+        val wifiList = results.map { data ->
+            Wifi(data.SSID, data.BSSID)
+        }
+
+        adapter.wifiList = wifiList
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun scanFailure() {
+        val results = wifiManager.scanResults
+        Log.d("와이파이", "스캔 실패 $results")
     }
 
     companion object {
