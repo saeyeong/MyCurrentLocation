@@ -31,10 +31,10 @@ import com.saeyeong.mycurrentlocation.requestPermissionWithRationale
 class MainActivity : BaseActivity() {
 
     private val binding: ActivityMainBinding by binding(R.layout.activity_main)
-    lateinit var adapter:RecyclerViewAdapter
+    lateinit var adapter: WifiRecyclerViewAdapter
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-
+    var permissionApproved: Boolean = false
+            private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val cancellationTokenSource by lazy {
         CancellationTokenSource()
     }
@@ -58,6 +58,7 @@ class MainActivity : BaseActivity() {
 
     private val wifiScanReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+
             val success = intent.getBooleanExtra(WifiManager.EXTRA_RESULTS_UPDATED, false)
             if (success) {
                 scanSuccess()
@@ -71,9 +72,7 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val view = binding.root
 
-        setContentView(view)
         init()
     }
 
@@ -88,7 +87,9 @@ class MainActivity : BaseActivity() {
     }
 
     private fun init() {
-        adapter = RecyclerViewAdapter()
+
+        adapter = WifiRecyclerViewAdapter()
+
         binding.recyclerView.adapter = adapter
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
@@ -96,7 +97,6 @@ class MainActivity : BaseActivity() {
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
         registerReceiver(wifiScanReceiver, intentFilter)
 
-        wifiManager.startScan()
     }
 
     override fun onRequestPermissionsResult(
@@ -143,11 +143,12 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    fun locationRequestOnClick(view: View) {
-        Log.d(TAG, "locationRequestOnClick()")
+    fun wifiScanAndLocationRequestOnClick(view: View) {
 
-        val permissionApproved =
+        permissionApproved =
             applicationContext.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        Log.d(TAG, "wifiScanAndLocationRequestOnClick()")
+        Log.d(TAG, "$permissionApproved")
 
         if (permissionApproved) {
             requestCurrentLocation()
@@ -158,10 +159,11 @@ class MainActivity : BaseActivity() {
                 fineLocationRationalSnackbar
             )
         }
+        wifiManager.startScan()
     }
+
     @SuppressLint("MissingPermission")
     private fun requestCurrentLocation() {
-        Log.d(TAG, "requestCurrentLocation()")
         if (applicationContext.hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
 
             val currentLocationTask: Task<Location> = fusedLocationClient.getCurrentLocation(
@@ -192,10 +194,9 @@ class MainActivity : BaseActivity() {
         val results = wifiManager.scanResults.toList()
         val wifiList = results.map { data ->
             Wifi(data.SSID, data.BSSID)
-        }
+        } as MutableList
 
-        adapter.wifiList = wifiList
-        adapter.notifyDataSetChanged()
+        adapter.submitList(wifiList)
     }
 
     private fun scanFailure() {
