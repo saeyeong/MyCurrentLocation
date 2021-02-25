@@ -120,14 +120,14 @@
         android:id="@+id/get_current_location_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/get_current_location_button"
+        android:text="@string/get_current_location_and_list_of_wifi"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/wrap_accuracy"
         app:layout_constraintVertical_bias="0"
         android:layout_marginTop="@dimen/margin"
-        android:onClick="locationRequestOnClick" />
+        android:onClick="wifiScanAndLocationRequestOnClick" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"
@@ -137,8 +137,9 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/get_current_location_button"
-        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-        tools:listitem="@layout/item_wifi" />
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/item_wifi"
+        android:background="@color/black" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
