@@ -185,10 +185,10 @@ class MainActivity : BaseActivity() {
 
     private fun logOutputToScreen(result: Location) {
         binding.run {
-            tvNumLatitude.text = "${result.latitude}"
-            tvNumLongitude.text = "${result.longitude}"
-            tvNumAltitude.text = "${result.altitude}"
-            tvNumAccuracy.text = "${result.accuracy}"
+            tvNumLatitude.text = "${result.latitude.toInt()}"
+            tvNumLongitude.text = "${result.longitude.toInt()}"
+            tvNumAltitude.text = "${result.altitude.toInt()}"
+            tvNumAccuracy.text = "${result.accuracy.toInt()}"
         }
     }
 
