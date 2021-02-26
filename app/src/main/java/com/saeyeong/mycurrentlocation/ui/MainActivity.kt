@@ -12,8 +12,10 @@ import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.provider.Settings
+import android.telephony.*
 import android.util.Log
 import android.view.View
+import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
 import com.google.android.gms.location.LocationServices
@@ -25,6 +27,7 @@ import com.saeyeong.mycurrentlocation.R
 import com.saeyeong.mycurrentlocation.base.BaseActivity
 import com.saeyeong.mycurrentlocation.databinding.ActivityMainBinding
 import com.saeyeong.mycurrentlocation.hasPermission
+import com.saeyeong.mycurrentlocation.model.BaseTransceiverStation
 import com.saeyeong.mycurrentlocation.model.Wifi
 import com.saeyeong.mycurrentlocation.requestPermissionWithRationale
 
@@ -33,6 +36,12 @@ class MainActivity : BaseActivity() {
     private val binding: ActivityMainBinding by binding(R.layout.activity_main)
     private val adapter by lazy {
         WifiRecyclerViewAdapter()
+    }
+    private val wifiManager by lazy {
+        applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    }
+    private val telephonyManager by lazy {
+        applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
     }
     var permissionApproved: Boolean = false
 
@@ -45,18 +54,14 @@ class MainActivity : BaseActivity() {
     private val fineLocationRationalSnackbar by lazy {
         Snackbar.make(
             binding.container,
-                R.string.fine_location_permission_rationale,
+                R.string.string_fine_location_permission_rationale,
             Snackbar.LENGTH_LONG
-        ).setAction(R.string.ok) {
+        ).setAction(R.string.string_ok) {
             requestPermissions(
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
                 REQUEST_FINE_LOCATION_PERMISSIONS_REQUEST_CODE
             )
         }
-    }
-
-    private val wifiManager by lazy {
-        applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     }
 
     private val wifiScanReceiver = object : BroadcastReceiver() {
@@ -99,7 +104,36 @@ class MainActivity : BaseActivity() {
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
         registerReceiver(wifiScanReceiver, intentFilter)
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            return
+        }
+
+        val allCellInfo = telephonyManager.allCellInfo
+        val cellInfo = getConnectedCellInfo(allCellInfo) as CellInfoWcdma
+        val bts = cellInfo.cellIdentity.run {
+            BaseTransceiverStation(cid, telephonyManager.networkOperatorName, mcc, mnc, lac)
+        }
+        bts.run {
+            binding.tvCellInfo.text = "$cellID, $telecom, $mcc, $mnc, $lac"
+        }
+        Log.d("aaaaa", "${cellInfo.cellIdentity.cid}")
+
+
     }
+
+    fun getConnectedCellInfo(allCellInfo: List<CellInfo>): CellInfo? {
+        val size = allCellInfo.size
+        var i = 0
+
+        while (size > i) {
+            if (allCellInfo[i].isRegistered)
+                return allCellInfo[i]
+            i++
+        }
+        return null
+    }
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -116,7 +150,7 @@ class MainActivity : BaseActivity() {
                 grantResults[0] == PackageManager.PERMISSION_GRANTED ->
                     Snackbar.make(
                         binding.container,
-                        R.string.permission_approved_explanation,
+                        R.string.string_permission_approved_explanation,
                         Snackbar.LENGTH_LONG
                     )
                         .show()
@@ -124,10 +158,10 @@ class MainActivity : BaseActivity() {
                 else -> {
                     Snackbar.make(
                         binding.container,
-                        R.string.fine_permission_denied_explanation,
+                        R.string.string_fine_permission_denied_explanation,
                         Snackbar.LENGTH_LONG
                     )
-                        .setAction(R.string.settings) {
+                        .setAction(R.string.string_settings) {
                             val intent = Intent()
                             intent.action = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                             val uri = Uri.fromParts(
