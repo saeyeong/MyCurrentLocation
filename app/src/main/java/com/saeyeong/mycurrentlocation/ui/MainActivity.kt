@@ -31,10 +31,13 @@ import com.saeyeong.mycurrentlocation.requestPermissionWithRationale
 class MainActivity : BaseActivity() {
 
     private val binding: ActivityMainBinding by binding(R.layout.activity_main)
-    lateinit var adapter: WifiRecyclerViewAdapter
-
+    private val adapter by lazy {
+        WifiRecyclerViewAdapter()
+    }
     var permissionApproved: Boolean = false
-            private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
     private val cancellationTokenSource by lazy {
         CancellationTokenSource()
     }
@@ -82,13 +85,12 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+
         super.onDestroy()
         unregisterReceiver(wifiScanReceiver)
     }
 
     private fun init() {
-
-        adapter = WifiRecyclerViewAdapter()
 
         binding.recyclerView.adapter = adapter
 
