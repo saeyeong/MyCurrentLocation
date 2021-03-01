@@ -90,50 +90,46 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
-
         super.onDestroy()
         unregisterReceiver(wifiScanReceiver)
     }
 
     private fun init() {
 
-        binding.recyclerView.adapter = adapter
+        binding.wifiRecyclerView.adapter = adapter
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
 
         intentFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
         registerReceiver(wifiScanReceiver, intentFilter)
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-            return
+        getCellInfo()?.run {
+            val cellInfoString = "$cellID, $telecom, $mcc, $mnc, $lac"
+            binding.tvCellInfo.text = cellInfoString
         }
-
-        val allCellInfo = telephonyManager.allCellInfo
-        val cellInfo = getConnectedCellInfo(allCellInfo) as CellInfoWcdma
-        val bts = cellInfo.cellIdentity.run {
-            BaseTransceiverStation(cid, telephonyManager.networkOperatorName, mcc, mnc, lac)
-        }
-        bts.run {
-            binding.tvCellInfo.text = "$cellID, $telecom, $mcc, $mnc, $lac"
-        }
-        Log.d("aaaaa", "${cellInfo.cellIdentity.cid}")
-
 
     }
 
-    fun getConnectedCellInfo(allCellInfo: List<CellInfo>): CellInfo? {
-        val size = allCellInfo.size
-        var i = 0
+    private fun getCellInfo(): BaseTransceiverStation? {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+            return null
+        val networkOperator = telephonyManager.networkOperator
 
-        while (size > i) {
-            if (allCellInfo[i].isRegistered)
-                return allCellInfo[i]
-            i++
+        return telephonyManager.allCellInfo.find{it.isRegistered}?.let {
+            when (it) {
+                is CellInfoWcdma -> it.cellIdentity.run {
+                    BaseTransceiverStation(cid,networkOperator, mcc, mnc, lac)
+                }
+                is CellInfoGsm -> it.cellIdentity.run {
+                    BaseTransceiverStation(cid,networkOperator, mcc, mnc, lac)
+                }
+                is CellInfoLte -> it.cellIdentity.run {
+                    BaseTransceiverStation(ci,networkOperator, mcc, mnc, 0)
+                }
+                else -> null
+            }
         }
-        return null
     }
-
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
